@@ -576,6 +576,7 @@ h2 { font-family: var(--f-head); font-weight: 600; }
   .stp .sts { font-size: 11.5px; }
   .stp .tick { right: 5px; top: 8px; width: 11px; height: 11px; }
 }
+[hidden] { display: none !important; }
 
 </style>
 <div class="topbar"><b>NDCT-Vax</b><span class="tbtns"><button type="button" class="btn sm themebtn"></button><button type="button" class="btn sm" id="menu" aria-label="Open contents">Contents</button></span></div>
@@ -1825,7 +1826,7 @@ SB.auth = function (path, body) {
 /* ---------- actions ---------- */
 function friendly(m) {
   m = String(m || '');
-  return /invalid login credentials/i.test(m) ? 'That email and password do not match. Check both, or ask your instructor to reset your password.'
+  return /invalid login credentials/i.test(m) ? 'That email and password do not match. Check both, or use “Forgotten your password?” below.'
     : /already registered|already exists/i.test(m) ? 'An account with this email already exists. Use “Sign in” instead.'
     : /join code/i.test(m) || /database error saving new user/i.test(m) ? 'That join code was not accepted. Check it with your instructor.'
     : /email not confirmed/i.test(m) ? 'Your email address has not been confirmed yet. Check your inbox, or ask your instructor.'
@@ -1904,7 +1905,34 @@ Acct.begin = function (session) {
     Acct.set({ sync: 'error' }); App.afterAccount();
   });
 };
+/* ---------- password recovery by email ----------
+   Acct.recover sends Supabase's reset email; its link returns here with #access_token=…&type=recovery (or #error=…).
+   The fragment is read once at start-up, turned into a session, and the Account page then asks for a new password. */
+App.recovery = null;
+(function () {
+  var h = location.hash || '';
+  if (!/(^#|&)(access_token|error)=/.test(h)) return;
+  var q = {}; h.slice(1).split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) q[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' ')); });
+  if (q.type === 'recovery' && q.access_token) App.recovery = { token: q.access_token, refresh: q.refresh_token, expires: q.expires_in, expires_at: q.expires_at };
+  else if (q.error || q.error_code) App.recovery = { error: /expired/i.test(q.error_code || q.error_description || '') ? 'That reset link has expired or was already used. Request a new one below.' : 'That reset link could not be used (' + (q.error_description || q.error) + '). Request a new one below.' };
+  try { history.replaceState(null, '', location.pathname + location.search + '#account'); } catch (e) { location.hash = '#account'; }
+})();
+Acct.recover = function (email) {
+  email = String(email || '').trim();
+  if (!/^\S+@\S+\.\S+$/.test(email)) return Promise.resolve('Enter the email address you signed up with.');
+  var back = location.origin + location.pathname;
+  return SB.auth('recover?redirect_to=' + encodeURIComponent(back), { email: email }).then(function () { return null; }, function (e) {
+    return /rate|seconds|too many/i.test(e.message) ? 'A reset email was sent recently. Please wait a minute before asking again.' : friendly(e.message);
+  });
+};
 Acct.init = function () {
+  if (App.recovery && App.recovery.token) {
+    var R = App.recovery;
+    return fetch(PMC.url + '/auth/v1/user', { headers: { apikey: PMC.key, Authorization: 'Bearer ' + R.token } }).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (u) { return Acct.begin(mkSession({ access_token: R.token, refresh_token: R.refresh, expires_at: +R.expires_at || undefined, expires_in: +R.expires || 3600, user: u })); })
+      .then(function () { App.recovery = { ready: true }; }, function () { App.recovery = { error: 'That reset link could not be used. Request a new one below.' }; })
+      .then(function () { Acct.set({ ready: true }); });
+  }
   var s = null; try { s = JSON.parse(localStorage.getItem(sessKey()) || 'null'); } catch (e) { }
   if (!s || !s.refresh_token) { Acct.set({ ready: true }); return Promise.resolve(); }
   Acct.session = s;
@@ -2930,12 +2958,15 @@ App.pageAccount = function () {
   var h = '<p class="eyebrow">Account</p><h1>' + (Ac.session ? 'Your account' : 'Sign in or join') + '</h1>';
   if (Ac.session && Ac.profile) {
     var p = Ac.profile;
+    if (App.recovery && App.recovery.ready) h += '<div class="callout key" id="rcv"><b>Set a new password</b><p>You opened a password reset link. Choose a new password to finish.</p><form id="rcf" class="form"><label>New password (at least 8 characters)<input type="password" id="rpw" autocomplete="new-password" minlength="8" required></label><button class="btn pri" type="submit">Save new password</button><p class="msg" id="rcm" role="status"></p></form></div>';
     h += '<div class="card-plain"><p><b>' + K.esc(p.full_name) + '</b><br>' + K.esc(p.email) + '<br>' + (p.role === 'instructor' ? 'Instructor' : 'Learner') + (Ac.cohort ? ' · ' + K.esc(Ac.cohort) : '') + '</p><p class="note sync">' + syncText() + '</p>' +
       '<p><button type="button" class="btn" id="exp">Download my data</button> <button type="button" class="btn" id="so">Sign out</button></p></div>' +
       '<h3>Change password</h3><form id="pwf" class="form"><label>New password (at least 8 characters)<input type="password" id="npw" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">Change password</button><p class="msg" id="pwm" role="status"></p></form>' +
-      '<h3>What is stored</h3><p>Your name, email, module progress, quiz answers, notes, highlights and written answers are stored on a secure server so that they follow you across devices. Your instructor can read them. They are used for teaching only; using them for research would need ethics approval and your separate consent. To have your data removed, ask your instructor. If you forget your password, your instructor can set a temporary one.</p>' + CLSET;
+      '<h3>What is stored</h3><p>Your name, email, module progress, quiz answers, notes, highlights and written answers are stored on a secure server so that they follow you across devices. Your instructor can read them. They are used for teaching only; using them for research would need ethics approval and your separate consent. To have your data removed, ask your instructor. If you forget your password, use “Forgotten your password?” on the sign-in form, or ask your instructor for a temporary one.</p>' + CLSET;
     return { html: h, after: function (root) {
       if (App.niyam) App.niyam.settings(root.querySelector('#niyamset'));
+      var rcf = root.querySelector('#rcf');
+      if (rcf) rcf.onsubmit = function (e) { e.preventDefault(); var m = root.querySelector('#rcm'), b = rcf.querySelector('button'); b.disabled = true; m.textContent = 'Saving…'; Ac.changePassword(root.querySelector('#rpw').value).then(function (er) { b.disabled = false; m.textContent = er || 'Password saved. You are signed in.'; m.className = 'msg' + (er ? ' bad' : ' ok'); if (!er) { App.recovery = null; rcf.querySelector('input').value = ''; setTimeout(function () { var c = root.querySelector('#rcv'); if (c) c.remove(); }, 2500); } }); };
       root.querySelector('#exp').onclick = App.exportMine;
       root.querySelector('#so').onclick = function () { this.disabled = true; Ac.signOut().then(function () { location.hash = '#home'; }); };
       root.querySelector('#pwf').onsubmit = function (e) { e.preventDefault(); var m = root.querySelector('#pwm'); m.textContent = 'Changing…'; Ac.changePassword(root.querySelector('#npw').value).then(function (er) { m.textContent = er || 'Password changed.'; m.className = 'msg' + (er ? ' bad' : ' ok'); if (!er) root.querySelector('#npw').value = ''; }); };
@@ -2944,7 +2975,8 @@ App.pageAccount = function () {
   if (Ac.session) h += '<p>Loading your profile…</p>';
   h += '<p class="lede">Accounts are for learners enrolled in a class. They save your progress across devices and let your instructor see your progress, notes and answers. The course works fully without one.</p>' +
     '<div class="tabs"><button type="button" class="tab on" data-t="in">Sign in</button><button type="button" class="tab" data-t="join">Join with a code</button></div>' +
-    '<form id="inf" class="form"><label>Email<input type="email" id="e1" autocomplete="username" required></label><label>Password<input type="password" id="p1" autocomplete="current-password" required></label><button class="btn pri" type="submit">Sign in</button><p class="msg" id="m1" role="status"></p><p class="note">Forgotten your password? Ask your instructor for a temporary one.</p></form>' +
+    '<form id="inf" class="form"><label>Email<input type="email" id="e1" autocomplete="username" required></label><label>Password<input type="password" id="p1" autocomplete="current-password" required></label><button class="btn pri" type="submit">Sign in</button><p class="msg" id="m1" role="status"></p><p class="note"><a href="#" id="fgt">Forgotten your password?</a></p></form>' +
+    '<form id="rsf" class="form" hidden><p>Enter the email address you signed up with. We will email you a link to set a new password. The link works once and expires after a short time.</p><label>Email<input type="email" id="e3" autocomplete="username" required></label><button class="btn pri" type="submit">Email me a reset link</button> <button class="btn" type="button" id="rsb">Back to sign in</button><p class="msg" id="m3" role="status"></p><p class="note">No email after a few minutes? Check your spam folder, or ask your instructor for a temporary password.</p></form>' +
     '<form id="jnf" class="form" hidden><label>Join code from your instructor<input type="text" id="jc" autocomplete="off" autocapitalize="characters" required></label><p class="msg" id="jcm"></p><label>Full name<input type="text" id="fn" autocomplete="name" required></label><label>Email<input type="email" id="e2" autocomplete="email" required></label><label>Choose a password (at least 8 characters)<input type="password" id="p2" autocomplete="new-password" minlength="8" required></label>' +
     '<label class="chk"><input type="checkbox" id="cs"> <span>I understand that my name, email, progress, notes and written answers are stored on a secure server for teaching, that my instructor can read them, and that they are not used for research without separate ethics approval and my consent.</span></label><button class="btn pri" type="submit">Create account</button><p class="msg" id="m2" role="status"></p></form>' + CLSET;
   return { html: h, after: function (root) {
@@ -2952,6 +2984,12 @@ App.pageAccount = function () {
     var tabs = root.querySelectorAll('.tab'), fi = root.querySelector('#inf'), fj = root.querySelector('#jnf');
     Array.prototype.forEach.call(tabs, function (t) { t.onclick = function () { Array.prototype.forEach.call(tabs, function (x) { x.classList.toggle('on', x === t); }); var j = t.getAttribute('data-t') === 'join'; fi.hidden = j; fj.hidden = !j; }; });
     function msg(el, t, bad) { el.textContent = t || ''; el.className = 'msg' + (t ? (bad ? ' bad' : ' ok') : ''); }
+    var fr = root.querySelector('#rsf'), tabbar = root.querySelector('.tabs');
+    if (App.recovery && App.recovery.error) { fi.hidden = true; fr.hidden = false; msg(root.querySelector('#m3'), App.recovery.error, true); App.recovery = null; }
+    root.querySelector('#fgt').onclick = function (e) { e.preventDefault(); fi.hidden = true; fr.hidden = false; tabbar.hidden = true; var e1 = root.querySelector('#e1').value; if (e1) root.querySelector('#e3').value = e1; root.querySelector('#e3').focus(); };
+    root.querySelector('#rsb').onclick = function () { fr.hidden = true; fi.hidden = false; tabbar.hidden = false; };
+    fr.onsubmit = function (e) { e.preventDefault(); var m = root.querySelector('#m3'), b = fr.querySelector('button.pri'); b.disabled = true; msg(m, 'Sending…');
+      Ac.recover(root.querySelector('#e3').value).then(function (er) { b.disabled = false; msg(m, er || 'If an account exists for that email, a reset link is on its way. Open it on this device to set a new password.', !!er); }); };
     fi.onsubmit = function (e) { e.preventDefault(); var m = root.querySelector('#m1'), b = fi.querySelector('button'); b.disabled = true; msg(m, 'Signing in…'); Ac.signIn(root.querySelector('#e1').value, root.querySelector('#p1').value).then(function (er) { b.disabled = false; if (er) msg(m, er, true); }); };
     var jc = root.querySelector('#jc'), jm = root.querySelector('#jcm'), tmj;
     jc.addEventListener('input', function () { clearTimeout(tmj); tmj = setTimeout(function () { if (jc.value.trim().length < 3) return msg(jm, ''); Ac.checkCode(jc.value).then(function (n) { msg(jm, n ? 'Joining: ' + n : 'That code was not recognised.', !n); }); }, 400); });

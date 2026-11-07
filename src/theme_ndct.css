@@ -1,0 +1,109 @@
+/* ===== NDCT-Vax visual identity ("Gazette"): its own look over the shared engine =====
+   Navy rail and frame, warm paper surfaces, deep teal accent, saffron highlights; Source Serif 4 for headings and rule text,
+   IBM Plex Sans for body, IBM Plex Mono for numbers. Overrides the shared style.css; load after it. */
+:root {
+  --bg: #F3EFE6; --surface: #FFFDF8; --ink: #16202A; --muted: #59626E; --line: #E2DCCF; --line2: #ECE7DC;
+  --accent: #0B5D63; --accent-ink: #FFFFFF; --accent-soft: #DCEBEA; --plot: #FFFDF8;
+  --c1: #0B5D63; --c2: #B8701A; --c3: #1F3F7A; --c4: #8C6A12;
+  --book: #1F3F7A; --book-soft: #EAEEF6; --eg: #3B4A63; --eg-soft: #EAEDF2;
+  --hl: #F8E2A6; --hl-ink: #16202A;
+  --chrome: #12213A; --active: #213A5E; --rail-ink: #E8EEF6; --rail-muted: #9DB0C8; --saffron: #E0A93B;
+  --learn: #1F3F7A; --practise: #B8701A; --check: #0B5D63; --answer: #6A3D8F;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-head: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #18212B; --surface: #0F151C; --ink: #E6EAEE; --muted: #A3ADB9; --line: #27323E; --line2: #1C2631;
+    --accent: #5CC2BE; --accent-ink: #0A1A1B; --accent-soft: #11302F; --plot: #0F151C;
+    --c1: #5CC2BE; --c2: #E7A64E; --c3: #9DB5E6; --c4: #E2C26A;
+    --book: #9DB5E6; --book-soft: #172238; --eg: #AEBBD3; --eg-soft: #18202D;
+    --hl: #5B4A16; --hl-ink: #F4ECD2;
+    --chrome: #0A1018; --active: #1B2B42; --rail-ink: #E2E8F0; --rail-muted: #8E9FB5; --saffron: #E7B356;
+    --learn: #9DB5E6; --practise: #E7A64E; --check: #5CC2BE; --answer: #C4A3E6;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #18212B; --surface: #0F151C; --ink: #E6EAEE; --muted: #A3ADB9; --line: #27323E; --line2: #1C2631;
+  --accent: #5CC2BE; --accent-ink: #0A1A1B; --accent-soft: #11302F; --plot: #0F151C;
+  --c1: #5CC2BE; --c2: #E7A64E; --c3: #9DB5E6; --c4: #E2C26A;
+  --book: #9DB5E6; --book-soft: #172238; --eg: #AEBBD3; --eg-soft: #18202D;
+  --hl: #5B4A16; --hl-ink: #F4ECD2;
+  --chrome: #0A1018; --active: #1B2B42; --rail-ink: #E2E8F0; --rail-muted: #8E9FB5; --saffron: #E7B356;
+  --learn: #9DB5E6; --practise: #E7A64E; --check: #5CC2BE; --answer: #C4A3E6;
+}
+body { background: var(--chrome); font-size: 15.5px; }
+
+/* rail: dark navy column */
+.rail { background: var(--chrome); color: var(--rail-ink); padding-top: 22px; }
+.rail .brand, .rail .brand b { color: var(--rail-ink); }
+.rail .brand .tx b { font-family: var(--f-head); font-weight: 600; font-size: 23px; letter-spacing: -.01em; }
+.rail .brand .tx span, .rail .instr > span, .rail .chip, .rail .acct-chip, .rail p { color: var(--rail-muted); }
+.rail .instr b { color: var(--rail-ink); }
+.rail .inst-logo { border: 0; border-radius: 4px; }
+.navgrp { color: var(--saffron); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; margin-top: 24px; }
+.nav a { color: var(--rail-ink); border-radius: 0; border-left: 3px solid transparent; padding: 7px 8px 7px 9px; }
+.nav a:hover { background: rgba(255, 255, 255, .06); }
+.nav a[aria-current="page"] { background: var(--active); color: #fff; border-left-color: var(--saffron); font-weight: 500; }
+.nav .n { color: var(--rail-muted); }
+.nav .dn { color: var(--saffron); }
+.rail .btn { background: transparent; color: var(--rail-ink); border-color: rgba(255, 255, 255, .22); }
+.rail .btn:hover { border-color: var(--saffron); color: var(--saffron); }
+.rail .btn.pri { background: var(--saffron); color: #1B1406; border-color: var(--saffron); }
+.rail a { color: var(--saffron); }
+.rail .nav a { color: var(--rail-ink); }
+.rail label, .rail .cl-note { color: var(--rail-muted); }
+
+/* page: flush paper sheet with a ruled masthead */
+.main { margin: 0; border: 0; border-radius: 0; min-height: 100vh; background: var(--surface); box-shadow: -1px 0 0 rgba(0, 0, 0, .25); }
+.col { max-width: 800px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--c2); }
+h1 { font-family: var(--f-head); font-weight: 600; letter-spacing: -.015em; padding-bottom: 14px; border-bottom: 3px double var(--line); margin-bottom: 16px; }
+h2 { font-family: var(--f-head); font-weight: 600; }
+.ctitle, .exh b { font-weight: 600; }
+.lede { font-size: 17px; }
+
+/* step bar: segmented track */
+.stepbar { background: var(--bg); padding: 4px; border-radius: 10px; gap: 3px; }
+.stp { border-top: 0; background: transparent; border-radius: 7px; padding: 8px 24px 8px 10px; }
+.stp:hover { background: color-mix(in srgb, var(--k) 10%, transparent); }
+.stp.on { background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .14), inset 0 -3px 0 var(--k); }
+.stp .stl { font-weight: 600; }
+
+/* cards, callouts and blocks: squarer, ruled */
+.card { border-radius: 4px; border-left: 3px solid var(--accent); background: var(--surface); }
+.card:hover { border-color: var(--accent); background: var(--accent-soft); }
+.card small { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .02em; }
+.callout { border-radius: 4px; border-left: 4px solid var(--accent); }
+.callout.warn { border-left-color: var(--bad); }
+.essentials { border-radius: 4px; border-top: 3px solid var(--saffron); }
+.ccard { border-radius: 6px; }
+.ccard .chead { background: color-mix(in srgb, var(--book) 7%, var(--surface)); border-bottom: 1px solid var(--line); }
+.stat { border-radius: 4px; }
+.stat b { font-family: var(--f-head); font-weight: 600; }
+.wg { border-radius: 6px; }
+.wg-h { background: var(--chrome) !important; color: var(--rail-ink); }
+.wg-h b { color: var(--rail-ink); }
+.wg-h .btn { background: transparent; color: var(--rail-ink); border-color: rgba(255, 255, 255, .25); }
+.readrule { border-left-color: var(--book); border-radius: 0 4px 4px 0; }
+.rbody, .rp-body { font-family: var(--f-head); font-size: 16.5px; }
+.btn { border-radius: 4px; }
+.prog i { background: var(--saffron); }
+
+/* phones: navy top bar */
+@media (max-width: 900px) {
+  .topbar { background: var(--chrome); color: var(--rail-ink); border-bottom: 0; }
+  .topbar b { font-family: var(--f-head); font-weight: 600; color: var(--rail-ink); }
+  .topbar .btn { background: transparent; color: var(--rail-ink); border-color: rgba(255, 255, 255, .25); }
+  body::before { background: var(--chrome); }
+  body { background: var(--surface); }
+  .main { box-shadow: none; }
+}
+.callout.pending { background: var(--warn-soft); border-left-color: var(--saffron); }
+.callout.pending > b:first-child { color: var(--warn); }
+@media (max-width: 600px) {
+  .stp { padding: 7px 18px 7px 8px; }
+  .stp .sts { font-size: 11.5px; }
+  .stp .tick { right: 5px; top: 8px; width: 11px; height: 11px; }
+}
